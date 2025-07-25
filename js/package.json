@@ -1,0 +1,14 @@
+{
+  "name": "diffpatch",
+  "version": "0.1.0",
+  "description": "A fast, efficient diff/patching algorithm balancing small patch size and speed",
+  "main": "diff.js",
+  "type": "module",
+  "scripts": {
+    "test": "node test.js",
+    "bench": "node test.js --bench"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "MIT"
+}
