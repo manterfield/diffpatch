@@ -75,69 +75,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: js
-        run: npm install
-
-      - name: Verify build
-        working-directory: js
-        run: |
-          # Verify all required files exist
-          if [ ! -f "diff.js" ]; then
-            echo "Error: diff.js not found"
-            exit 1
-          fi
-          if [ ! -f "types/index.d.ts" ]; then
-            echo "Error: types/index.d.ts not found"
-            exit 1
-          fi
-          echo "All required files present"
+        run: pnpm install
 
       - name: Publish to npm
         working-directory: js
-        run: npm publish --access public
+        run: pnpm publish --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Create Git tag
-        run: |
-          VERSION="${{ needs.check-version.outputs.version }}"
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git tag -a "v$VERSION" -m "Release v$VERSION"
-          git push origin "v$VERSION"
-
-      - name: Create GitHub Release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          tag_name: v${{ needs.check-version.outputs.version }}
-          release_name: Release v${{ needs.check-version.outputs.version }}
-          body: |
-            ## JavaScript Package Release v${{ needs.check-version.outputs.version }}
-
-            The JavaScript implementation of diffpatch has been published to npm.
-
-            ### Installation
-            ```bash
-            npm install @mantty/diffpatch
-            ```
-
-            ### Usage
-            ```javascript
-            import { diff, applyPatch } from '@mantty/diffpatch';
-
-            const oldArray = ['a', 'b', 'c'];
-            const newArray = ['a', 'x', 'c', 'd'];
-
-            const operations = diff(oldArray, newArray);
-            const result = applyPatch(oldArray, operations);
-            console.log(result); // ['a', 'x', 'c', 'd']
-            ```
-
-            ### Features
-            - 🚀 Fast and efficient diffing algorithm
-            - 📦 Zero dependencies
-            - 🔧 TypeScript support included
-            - 🌐 Interoperable with Go implementation
-          draft: false
-          prerelease: false
