@@ -2,8 +2,6 @@ package diffpatch
 
 import (
 	"encoding/json"
-	"fmt"
-	"time"
 )
 
 // Operation represents a diff operation as [index, deleteCount, additions]
@@ -263,77 +261,3 @@ func OperationsFromJSON(jsonStr string) ([]Operation, error) {
 	}
 	return ops, nil
 }
-
-func benchmark(old, newArr []string, name string) {
-	start := time.Now()
-	patch := Diff(old, newArr)
-	diffTime := time.Since(start)
-
-	start = time.Now()
-	result := ApplyPatch(old, patch)
-	applyTime := time.Since(start)
-
-	// Check correctness
-	correct := len(result) == len(newArr)
-	if correct {
-		for i := range result {
-			if result[i] != newArr[i] {
-				correct = false
-				break
-			}
-		}
-	}
-
-	// Calculate patch size
-	jsonPatch, _ := OperationsToJSON(patch)
-	patchSize := len(jsonPatch)
-
-	totalTime := diffTime + applyTime
-
-	fmt.Println("===========")
-	fmt.Printf("Correct: %t\n", correct)
-	fmt.Printf("Patch size: %d\n", patchSize)
-	fmt.Printf("Total time for patch and apply: %v\n", totalTime)
-}
-
-// func main() {
-// 	fmt.Println("=== Go Diff Algorithm ===")
-
-// 	// Test case 1: Simple array (setOne equivalent)
-// 	old1 := []string{"a", "b", "c", "d", "e", "a", "a", "a", "b", "dreary", "bumps", "lumps", "numps"}
-// 	new1 := []string{"a", "x", "y", "d", "e", "f", "a", "a", "a", "b", "dreary", "bumps", "lumps", "numps"}
-
-// 	benchmark(old1, new1, "setOne")
-
-// 	// Test case 2: Load markdown files (setTwo equivalent)
-// 	if oldLines, err := loadFileLines("test_documents/a_old.md"); err == nil {
-// 		if newLines, err := loadFileLines("test_documents/a_new.md"); err == nil {
-// 			benchmark(oldLines, newLines, "setTwo")
-// 		}
-// 	}
-
-// 	// Test case 3: Load markdown files as sentences (setThree equivalent)
-// 	if oldSentences, err := loadFileSentences("test_documents/a_old.md"); err == nil {
-// 		if newSentences, err := loadFileSentences("test_documents/a_new.md"); err == nil {
-// 			benchmark(oldSentences, newSentences, "setThree")
-// 		}
-// 	}
-
-// 	// Test case 4: Large different documents (setFour equivalent)
-// 	if techLines, err := loadFileLines("test_documents/tech_article_old.md"); err == nil {
-// 		if climateLines, err := loadFileLines("test_documents/climate_article_new.md"); err == nil {
-// 			benchmark(techLines, climateLines, "setFour")
-// 		}
-// 	}
-
-// 	// Interoperability example
-// 	fmt.Println("\n=== Interoperability Example ===")
-// 	patch := Diff(old1, new1)
-// 	jsonPatch, _ := OperationsToJSON(patch)
-// 	fmt.Printf("Patch JSON: %s\n", jsonPatch)
-
-// 	// Parse it back and apply
-// 	parsedOps, _ := OperationsFromJSON(jsonPatch)
-// 	result := ApplyDiff(old1, parsedOps)
-// 	fmt.Printf("Roundtrip correct: %t\n", fmt.Sprintf("%v", result) == fmt.Sprintf("%v", new1))
-// }
