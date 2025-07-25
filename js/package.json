@@ -7,13 +7,18 @@
   "type": "module",
   "files": [
     "diff.js",
-    "types/"
+    "types/",
+    "../README.md"
   ],
   "scripts": {
     "test": "node test.js",
     "bench": "node test.js --bench"
   },
-  "keywords": [],
+  "keywords": [
+    "diff",
+    "patch",
+    "myers"
+  ],
   "author": "Tom Manterfield",
   "license": "Apache-2.0"
 }
