@@ -7,6 +7,7 @@ The aim is a diff algorithm that is fast in practice, produces small patch sizes
 ## Features
 
 **Interoperable**
+
 The patches produced by Go and JS are interoperable and serializable.
 That is to say you could generate a patch client side with JS, send it to your backend written in Go (or Node of course), and be able to arrive at the correct result.
 
