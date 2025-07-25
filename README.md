@@ -1,91 +1,32 @@
-# Go/JavaScript Diff Algorithm Implementation
+# Diff/Patch
 
-## Summary
+diffpatch is a diff and patch algorithm with Go and Javascript implementations.
 
-Successfully created Go implementations of the `diff` and `applyDiff` functions with full interoperability with the JavaScript version.
+The aim is a diff algorithm that is fast in practice, produces small patch sizes, with patches that can be applied across different systems, clients, etc.
 
 ## Features
 
-### Core Functions
-- `Diff(oldArr, newArr []string) []Operation` - Creates diff patches
-- `ApplyDiff(arr []string, ops []Operation) []string` - Applies patches
-- `OperationsToJSON(ops []Operation) (string, error)` - Converts patches to JSON
-- `OperationsFromJSON(jsonStr string) ([]Operation, error)` - Parses JSON patches
+**Interoperable**
+The patches produced by Go and JS are interoperable and serializable.
+That is to say you could generate a patch client side with JS, send it to your backend written in Go (or Node of course), and be able to arrive at the correct result.
 
-### Interoperability
-- ✅ Patches created in Go can be applied in JavaScript
-- ✅ Patches created in JavaScript can be applied in Go  
-- ✅ Identical patch formats: `[index, deleteCount, additions]`
-- ✅ JSON serialization compatibility
+**Fast**
+In terms of big-O, Myers' has a better worst case than this implementation.
+In real-world usage however, this algorithm is very efficient.
 
-### Performance
-- Go implementation is significantly faster than JS (microseconds vs milliseconds)
-- Memory efficient with proper slice management
-- Optimized for large documents
+**Efficient**
+This algorithm outputs small patches (without guaranteeing they are optimally small)
 
-## Test Results
+**No dependencies**
+Both the Go and Javascript implementations have zero external dependencies
 
-All test cases pass with 100% correctness:
+**Tiny**
+I actually need to measure exactly how small the packages end up being. For now you'll have to take my word for it that they're itty bitty. Perhaps even teeny weeny.
 
-| Test Case | JS Patch Size | Go Patch Size | Patches Identical | JS→Go | Go→JS |
-|-----------|---------------|---------------|-------------------|-------|-------|
-| setOne    | 40 bytes      | 40 bytes      | ✅ Yes            | ✅ Yes | ✅ Yes |
-| setTwo    | 1,236 bytes   | 1,236 bytes   | ✅ Yes            | ✅ Yes | ✅ Yes |
-| setThree  | 349 bytes     | 349 bytes     | ✅ Yes            | ✅ Yes | ✅ Yes |
-| setFour   | 19,719 bytes  | 19,719 bytes  | ✅ Yes            | ✅ Yes | ✅ Yes |
 
-## Files
+## Notes
 
-- `diff.go` - Original Go implementation with benchmarks
-- `difflib/difflib.go` - Library version of Go functions
-- `diff.js` - JavaScript implementation (exports functions)
-- All test documents and data files
+> diffpatch is primarily focused on 'natural' text, such as documents, blog posts, markdown files, etc.
+> The algorithm doesn't particularly _care_ what the text is, but when optimising I test against those cases rather than (e.g.) code or structured data.
 
-## Usage
-
-### Go
-```go
-package main
-
-import "diff-bench/difflib"
-
-func main() {
-    old := []string{"a", "b", "c"}
-    new := []string{"a", "x", "c"}
-    
-    // Create patch
-    patch := difflib.Diff(old, new)
-    
-    // Apply patch
-    result := difflib.ApplyDiff(old, patch)
-    
-    // JSON interop
-    jsonPatch, _ := difflib.OperationsToJSON(patch)
-    parsedPatch, _ := difflib.OperationsFromJSON(jsonPatch)
-}
-```
-
-### JavaScript
-```javascript
-import { diff, applyDiff } from './diff.js';
-
-const old = ["a", "b", "c"];
-const newArr = ["a", "x", "c"];
-
-// Create patch
-const patch = diff(old, newArr);
-
-// Apply patch  
-const result = applyDiff(old, patch);
-
-// JSON format: [[1, 1, ["x"]]]
-```
-
-## Conclusion
-
-The Go implementation successfully provides:
-1. ✅ Identical functionality to JavaScript version
-2. ✅ Full patch format interoperability 
-3. ✅ Superior performance (10-100x faster)
-4. ✅ Support for all test cases including large documents
-5. ✅ Clean, modular code structure
+> diffpatch doesn't produce patches that are nice to read, unless you're a computer program - in which case you'll love reading them. If you're a human though, not so much. This helps keep the size down for sending over network/storing/etc.
