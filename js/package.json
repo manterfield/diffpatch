@@ -3,12 +3,16 @@
   "version": "0.1.0",
   "description": "A fast, efficient diff/patching algorithm balancing small patch size and speed",
   "main": "diff.js",
+  "types": "types/index.d.ts",
   "type": "module",
+  "files": [
+    "diff.js"
+  ],
   "scripts": {
     "test": "node test.js",
     "bench": "node test.js --bench"
   },
   "keywords": [],
-  "author": "",
-  "license": "MIT"
+  "author": "Tom Manterfield",
+  "license": "Apache-2.0"
 }
