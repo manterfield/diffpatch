@@ -18,7 +18,7 @@ func BoundsDiff(oldArr, newArr []string) []Operation {
 		return []Operation{{0, oldLen, []string{}}}
 	}
 
-	var ops []Operation
+	ops := make([]Operation, 0, 4) // Pre-allocate with capacity to reduce allocations
 	oldPos := 0
 	newPos := 0
 
