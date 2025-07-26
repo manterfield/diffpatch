@@ -166,7 +166,7 @@ function applyPatch(arr, ops) {
 function isGoodSyncPoint(oldArr, newArr, oldIdx, newIdx) {
   const oldLen = oldArr.length;
   const newLen = newArr.length;
-  
+
   if (oldIdx >= oldLen || newIdx >= newLen) {
     return oldIdx >= oldLen && newIdx >= newLen;
   }
@@ -176,7 +176,14 @@ function isGoodSyncPoint(oldArr, newArr, oldIdx, newIdx) {
   const maxCheck = 2;
   const maxOld = oldLen - oldIdx;
   const maxNew = newLen - newIdx;
-  const checkLimit = maxCheck < maxOld ? (maxCheck < maxNew ? maxCheck : maxNew) : (maxOld < maxNew ? maxOld : maxNew);
+  const checkLimit =
+    maxCheck < maxOld
+      ? maxCheck < maxNew
+        ? maxCheck
+        : maxNew
+      : maxOld < maxNew
+      ? maxOld
+      : maxNew;
 
   for (let i = 0; i < checkLimit; i++) {
     if (oldArr[oldIdx + i] === newArr[newIdx + i]) {
@@ -188,8 +195,7 @@ function isGoodSyncPoint(oldArr, newArr, oldIdx, newIdx) {
 
   // Good sync point if we have 2+ matches or we've reached the end of both arrays
   return (
-    matches >= 2 ||
-    (oldIdx + matches >= oldLen && newIdx + matches >= newLen)
+    matches >= 2 || (oldIdx + matches >= oldLen && newIdx + matches >= newLen)
   );
 }
 

@@ -1,6 +1,6 @@
 {
   "name": "@mantty/diffpatch",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "A fast, efficient diff/patching algorithm balancing small patch size and speed",
   "main": "diff.js",
   "types": "types/index.d.ts",
