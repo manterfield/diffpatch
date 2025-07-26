@@ -19,8 +19,8 @@ That is to say you could generate a patch client side with JS, send it to your b
 
 **Fast**
 
+In real-world usage, this algorithm is very efficient.
 In terms of big-O, Myers' has a better worst case than this implementation.
-In real-world usage however, this algorithm is very efficient.
 
 **Efficient**
 

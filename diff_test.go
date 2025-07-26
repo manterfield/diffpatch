@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/manterfield/diffpatch"
+	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // Test case represents a test scenario
@@ -45,24 +46,19 @@ func loadTestCases() ([]testCase, error) {
 
 			// Check if corresponding new file exists
 			if _, err := os.Stat(newFile); err == nil {
-				// Add test cases for each split type
-				cases = append(cases, testCase{
-					name:    fmt.Sprintf("test%s_lines", testNum),
-					oldFile: oldFile,
-					newFile: newFile,
-					splitBy: "\n",
-				})
+				// We're focusing only on "." split files for now, as it's the most
+				// balanced for both speed and patch size
+				// cases = append(cases, testCase{
+				// 	name:    fmt.Sprintf("test%s_lines", testNum),
+				// 	oldFile: oldFile,
+				// 	newFile: newFile,
+				// 	splitBy: "\n",
+				// })
 				cases = append(cases, testCase{
 					name:    fmt.Sprintf("test%s_sentences", testNum),
 					oldFile: oldFile,
 					newFile: newFile,
 					splitBy: ".",
-				})
-				cases = append(cases, testCase{
-					name:    fmt.Sprintf("test%s_words", testNum),
-					oldFile: oldFile,
-					newFile: newFile,
-					splitBy: " ",
 				})
 			}
 		}
@@ -112,17 +108,32 @@ func TestDiffPatch(t *testing.T) {
 			if err != nil {
 				t.Fatalf("Failed to load new file %s: %v", tc.newFile, err)
 			} // Generate patch
-			patch := diffpatch.Diff(oldArr, newArr)
 
-			// Apply patch
-			result := diffpatch.ApplyPatch(oldArr, patch)
+			t.Run("diff", func(t *testing.T) {
+				patch := diffpatch.Diff(oldArr, newArr)
+				// Apply patch
+				result := diffpatch.ApplyPatch(oldArr, patch)
 
-			// Verify result equals newArr
-			if !reflect.DeepEqual(result, newArr) {
-				t.Errorf("Patch application failed for %s", tc.name)
-				t.Logf("Expected: %v", newArr)
-				t.Logf("Got: %v", result)
-			}
+				// Verify result equals newArr
+				if !reflect.DeepEqual(result, newArr) {
+					t.Errorf("Patch application failed for %s", tc.name)
+					t.Logf("Expected: %v", newArr)
+					t.Logf("Got: %v", result)
+				}
+			})
+
+			t.Run("binary", func(t *testing.T) {
+				patch := diffpatch.BoundsDiff(oldArr, newArr)
+				// Apply patch
+				result := diffpatch.ApplyPatch(oldArr, patch)
+
+				// Verify result equals newArr
+				if !reflect.DeepEqual(result, newArr) {
+					t.Errorf("Patch application failed for %s", tc.name)
+					t.Logf("Expected: %v", newArr)
+					t.Logf("Got: %v", result)
+				}
+			})
 		})
 	}
 }
@@ -145,24 +156,52 @@ func BenchmarkDiffPatch(b *testing.B) {
 			b.Fatalf("Failed to load new file %s: %v", tc.newFile, err)
 		}
 
-		b.Run(tc.name+"_diff", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				_ = diffpatch.Diff(oldArr, newArr)
-			}
-		})
-
-		b.Run(tc.name+"_apply", func(b *testing.B) {
-			patch := diffpatch.Diff(oldArr, newArr)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				_ = diffpatch.ApplyPatch(oldArr, patch)
-			}
-		})
-
-		b.Run(tc.name+"_combined", func(b *testing.B) {
+		b.Run(tc.name+"_dif", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
 				patch := diffpatch.Diff(oldArr, newArr)
 				_ = diffpatch.ApplyPatch(oldArr, patch)
+
+				b.StopTimer()
+				pjson, err := diffpatch.OperationsToJSON(patch)
+				if err != nil {
+					fmt.Println("Failed to get patch JSON")
+				}
+				b.ReportMetric(float64(len(pjson)), "patchb/op")
+				b.StartTimer()
+			}
+		})
+
+		b.Run(tc.name+"_bin", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				patch := diffpatch.BoundsDiff(oldArr, newArr)
+				_ = diffpatch.ApplyPatch(oldArr, patch)
+
+				b.StopTimer()
+				pjson, err := diffpatch.OperationsToJSON(patch)
+				if err != nil {
+					fmt.Println("Failed to get patch JSON")
+				}
+				b.ReportMetric(float64(len(pjson)), "patchb/op")
+				b.StartTimer()
+			}
+		})
+
+		newText := strings.Join(newArr[:], ".")
+		oldText := strings.Join(oldArr[:], ".")
+		b.Run(tc.name+"_dpm", func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				dpm := diffmatchpatch.New()
+				patch := dpm.PatchMake(oldText, newText)
+				_, _ = dpm.PatchApply(patch, oldText)
+
+				b.StopTimer()
+				patchStrings := []string{}
+				for _, p := range patch {
+					patchStrings = append(patchStrings, p.String())
+				}
+				pString := strings.Join(patchStrings, "\n")
+				b.ReportMetric(float64(len(pString)), "patchb/op")
+				b.StartTimer()
 			}
 		})
 	}
