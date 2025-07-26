@@ -9,62 +9,30 @@ type Operation []interface{}
 
 // Diff computes the difference between oldArr and newArr
 func Diff(oldArr, newArr []string) []Operation {
-	var ops []Operation
-	oldPos := 0
-	newPos := 0
 	oldLen := len(oldArr)
 	newLen := len(newArr)
 
-	// Compute common prefix
-	prefix := 0
-	for prefix < oldLen && prefix < newLen && oldArr[prefix] == newArr[prefix] {
-		prefix++
-	}
-
-	// Compute common suffix
-	suffix := 0
-	for oldLen-suffix-1 >= prefix && newLen-suffix-1 >= prefix &&
-		oldArr[oldLen-suffix-1] == newArr[newLen-suffix-1] {
-		suffix++
-	}
-
-	// If we have trimmed prefix/suffix, diff the middle segments
-	if prefix > 0 || suffix > 0 {
-		midOldLen := oldLen - prefix - suffix
-		midNewLen := newLen - prefix - suffix
-
-		if midOldLen == 0 && midNewLen == 0 {
+	if oldLen == 0 {
+		if newLen == 0 {
 			return []Operation{}
 		}
-
-		if midOldLen == 0 {
-			additions := newArr[prefix : newLen-suffix]
-			return []Operation{{prefix, 0, additions}}
-		}
-
-		if midNewLen == 0 {
-			return []Operation{{prefix, midOldLen, []string{}}}
-		}
-
-		oldMid := oldArr[prefix : oldLen-suffix]
-		newMid := newArr[prefix : newLen-suffix]
-		midOps := Diff(oldMid, newMid)
-
-		// Adjust indices for the middle operations
-		for i := range midOps {
-			midOps[i][0] = midOps[i][0].(int) + prefix
-		}
-		return midOps
+		return []Operation{{0, 0, newArr}}
 	}
 
-	// Build index of newArr positions for fast lookups
-	newIndex := make(map[string][]int)
-	for i, val := range newArr {
-		newIndex[val] = append(newIndex[val], i)
+	if newLen == 0 {
+		return []Operation{{0, oldLen, []string{}}}
 	}
+
+	ops := make([]Operation, 0, 4) // Pre-allocate with capacity to reduce allocations
+	oldPos := 0
+	newPos := 0
 
 	for oldPos < oldLen || newPos < newLen {
-		// Skip matching elements
+		// Find start of change by scanning forward until difference found
+		changeOldStart := oldPos
+		changeNewStart := newPos
+
+		// Skip matching prefix
 		for oldPos < oldLen && newPos < newLen && oldArr[oldPos] == newArr[newPos] {
 			oldPos++
 			newPos++
@@ -74,86 +42,78 @@ func Diff(oldArr, newArr []string) []Operation {
 			break
 		}
 
-		opStart := oldPos
-		addStart := newPos
-		syncOld := oldLen
-		syncNew := newLen
+		// We found a difference, now find the bounds of this change
+		changeOldStart = oldPos
+		changeNewStart = newPos
 
-		// Optimized lookahead
-		remainingOld := oldLen - oldPos
-		remainingNew := newLen - newPos
-		lookAhead := remainingOld
-		if remainingNew > remainingOld {
-			lookAhead = remainingNew
-		}
-		if lookAhead > 100 {
-			lookAhead = 100
-		}
+		// Find the next synchronization point using a forward scan
+		syncFound := false
+		syncOldPos := oldLen
+		syncNewPos := newLen
 
-		// Find sync point using indexed positions for performance
-		outerFound := false
-		searchEnd := newPos + lookAhead
-		if searchEnd > newLen {
-			searchEnd = newLen
-		}
+		// Look for the next matching sequence
+		maxScanDistance := 50 // Prevent excessive scanning
 
-		for ahead := 0; ahead <= lookAhead && oldPos+ahead < oldLen && !outerFound; ahead++ {
-			oldIdx := oldPos + ahead
-			element := oldArr[oldIdx]
-			positions, exists := newIndex[element]
-			if !exists {
-				continue
-			}
-
-			for _, pos := range positions {
-				if pos < newPos || pos > searchEnd {
+		for scanDist := 1; scanDist <= maxScanDistance && !syncFound; scanDist++ {
+			// Try matching elements at various distances
+			for oldOffset := 0; oldOffset <= scanDist && changeOldStart+oldOffset < oldLen; oldOffset++ {
+				newOffset := scanDist - oldOffset
+				if changeNewStart+newOffset >= newLen {
 					continue
 				}
 
-				// Count matching sequence
-				matchLen := 0
-				maxOld := oldLen - oldIdx
-				maxNew := newLen - pos
-				maxLen := maxOld
-				if maxNew < maxOld {
-					maxLen = maxNew
-				}
+				oldIdx := changeOldStart + oldOffset
+				newIdx := changeNewStart + newOffset
 
-				for matchLen < maxLen && oldArr[oldIdx+matchLen] == newArr[pos+matchLen] {
-					matchLen++
-				}
-
-				// Valid match if significant or end of both arrays
-				if matchLen >= 2 || (oldIdx+matchLen >= oldLen && pos+matchLen >= newLen) {
-					syncOld = oldIdx
-					syncNew = pos
-					outerFound = true
+				if oldArr[oldIdx] == newArr[newIdx] && isGoodSyncPoint(oldArr, newArr, oldIdx, newIdx) {
+					syncOldPos = oldIdx
+					syncNewPos = newIdx
+					syncFound = true
 					break
 				}
 			}
 		}
 
-		// Create operation
-		deleteCount := syncOld - opStart
-		addCount := syncNew - addStart
+		// Create operation for this change
+		deleteCount := syncOldPos - changeOldStart
+		addCount := syncNewPos - changeNewStart
 
 		if deleteCount > 0 || addCount > 0 {
-			var additions []string
-			if addCount == 0 {
-				additions = []string{}
-			} else {
-				additions = make([]string, addCount)
-				copy(additions, newArr[addStart:addStart+addCount])
+			additions := make([]string, addCount)
+			if addCount > 0 {
+				copy(additions, newArr[changeNewStart:changeNewStart+addCount])
 			}
 
-			ops = append(ops, Operation{opStart, deleteCount, additions})
+			ops = append(ops, Operation{changeOldStart, deleteCount, additions})
 		}
 
-		oldPos = syncOld
-		newPos = syncNew
+		oldPos = syncOldPos
+		newPos = syncNewPos
 	}
 
 	return ops
+}
+
+// isGoodSyncPoint checks if two positions represent a good synchronization point
+func isGoodSyncPoint(oldArr, newArr []string, oldIdx, newIdx int) bool {
+	if oldIdx >= len(oldArr) || newIdx >= len(newArr) {
+		return oldIdx >= len(oldArr) && newIdx >= len(newArr)
+	}
+
+	// Check for at least 2 consecutive matches or end of arrays
+	matches := 0
+	maxCheck := 2
+
+	for i := 0; i < maxCheck && oldIdx+i < len(oldArr) && newIdx+i < len(newArr); i++ {
+		if oldArr[oldIdx+i] == newArr[newIdx+i] {
+			matches++
+		} else {
+			break
+		}
+	}
+
+	// Good sync point if we have 2+ matches or we've reached the end of both arrays
+	return matches >= 2 || (oldIdx+matches >= len(oldArr) && newIdx+matches >= len(newArr))
 }
 
 // ApplyPatch applies the diff operations to the original array

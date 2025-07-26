@@ -11,7 +11,6 @@ import (
 	"testing"
 
 	"github.com/manterfield/diffpatch"
-	"github.com/sergi/go-diff/diffmatchpatch"
 )
 
 // Test case represents a test scenario
@@ -122,8 +121,8 @@ func TestDiffPatch(t *testing.T) {
 				}
 			})
 
-			t.Run("binary", func(t *testing.T) {
-				patch := diffpatch.BoundsDiff(oldArr, newArr)
+			t.Run("simple", func(t *testing.T) {
+				patch := diffpatch.SimpleDiff(oldArr, newArr)
 				// Apply patch
 				result := diffpatch.ApplyPatch(oldArr, patch)
 
@@ -171,9 +170,9 @@ func BenchmarkDiffPatch(b *testing.B) {
 			}
 		})
 
-		b.Run(tc.name+"_bin", func(b *testing.B) {
+		b.Run(tc.name+"_sim", func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				patch := diffpatch.BoundsDiff(oldArr, newArr)
+				patch := diffpatch.SimpleDiff(oldArr, newArr)
 				_ = diffpatch.ApplyPatch(oldArr, patch)
 
 				b.StopTimer()
@@ -186,23 +185,23 @@ func BenchmarkDiffPatch(b *testing.B) {
 			}
 		})
 
-		newText := strings.Join(newArr[:], ".")
-		oldText := strings.Join(oldArr[:], ".")
-		b.Run(tc.name+"_dpm", func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				dpm := diffmatchpatch.New()
-				patch := dpm.PatchMake(oldText, newText)
-				_, _ = dpm.PatchApply(patch, oldText)
+		// newText := strings.Join(newArr[:], ".")
+		// oldText := strings.Join(oldArr[:], ".")
+		// b.Run(tc.name+"_dpm", func(b *testing.B) {
+		// 	for i := 0; i < b.N; i++ {
+		// 		dpm := diffmatchpatch.New()
+		// 		patch := dpm.PatchMake(oldText, newText)
+		// 		_, _ = dpm.PatchApply(patch, oldText)
 
-				b.StopTimer()
-				patchStrings := []string{}
-				for _, p := range patch {
-					patchStrings = append(patchStrings, p.String())
-				}
-				pString := strings.Join(patchStrings, "\n")
-				b.ReportMetric(float64(len(pString)), "patchb/op")
-				b.StartTimer()
-			}
-		})
+		// 		b.StopTimer()
+		// 		patchStrings := []string{}
+		// 		for _, p := range patch {
+		// 			patchStrings = append(patchStrings, p.String())
+		// 		}
+		// 		pString := strings.Join(patchStrings, "\n")
+		// 		b.ReportMetric(float64(len(pString)), "patchb/op")
+		// 		b.StartTimer()
+		// 	}
+		// })
 	}
 }

@@ -2,59 +2,26 @@
 const EMPTY_ARRAY = [];
 
 function diff(oldArr, newArr) {
-  const ops = [];
-  let oldPos = 0;
-  let newPos = 0;
   const oldLen = oldArr.length;
   const newLen = newArr.length;
 
-  // Compute common prefix
-  let prefix = 0;
-  while (
-    prefix < oldLen &&
-    prefix < newLen &&
-    oldArr[prefix] === newArr[prefix]
-  ) {
-    prefix++;
-  }
-  // Compute common suffix
-  let suffix = 0;
-  while (
-    oldLen - suffix - 1 >= prefix &&
-    newLen - suffix - 1 >= prefix &&
-    oldArr[oldLen - suffix - 1] === newArr[newLen - suffix - 1]
-  ) {
-    suffix++;
-  }
-  // If we have trimmed prefix/suffix, diff the middle segments
-  if (prefix > 0 || suffix > 0) {
-    const midOldLen = oldLen - prefix - suffix;
-    const midNewLen = newLen - prefix - suffix;
-    if (midOldLen === 0 && midNewLen === 0) {
+  if (oldLen === 0) {
+    if (newLen === 0) {
       return [];
     }
-    if (midOldLen === 0) {
-      return [[prefix, 0, newArr.slice(prefix, newLen - suffix)]];
-    }
-    if (midNewLen === 0) {
-      return [[prefix, midOldLen, EMPTY_ARRAY]];
-    }
-    const oldMid = oldArr.slice(prefix, oldLen - suffix);
-    const newMid = newArr.slice(prefix, newLen - suffix);
-    const midOps = diff(oldMid, newMid);
-    return midOps.map((op) => [op[0] + prefix, op[1], op[2]]);
-  }
-  // Build index of newArr positions for fast lookups
-  const newIndex = new Map();
-  for (let i = 0; i < newLen; i++) {
-    const val = newArr[i];
-    const arr = newIndex.get(val);
-    if (arr) arr.push(i);
-    else newIndex.set(val, [i]);
+    return [[0, 0, newArr.slice()]];
   }
 
+  if (newLen === 0) {
+    return [[0, oldLen, EMPTY_ARRAY]];
+  }
+
+  const ops = []; // Pre-allocate with capacity to reduce allocations
+  let oldPos = 0;
+  let newPos = 0;
+
   while (oldPos < oldLen || newPos < newLen) {
-    // Skip matching elements
+    // Skip matching prefix
     while (
       oldPos < oldLen &&
       newPos < newLen &&
@@ -64,87 +31,69 @@ function diff(oldArr, newArr) {
       newPos++;
     }
 
-    if (oldPos >= oldLen && newPos >= newLen) break;
+    if (oldPos >= oldLen && newPos >= newLen) {
+      break;
+    }
 
-    const opStart = oldPos;
-    const addStart = newPos;
-    let syncOld = oldLen;
-    let syncNew = newLen;
+    // We found a difference, now find the bounds of this change
+    const changeOldStart = oldPos;
+    const changeNewStart = newPos;
 
-    // Optimized lookahead - avoid Math.max when possible
-    const remainingOld = oldLen - oldPos;
-    const remainingNew = newLen - newPos;
-    const lookAhead =
-      remainingOld > remainingNew
-        ? remainingOld > 100
-          ? 100
-          : remainingOld
-        : remainingNew > 100
-        ? 100
-        : remainingNew;
+    // Find the next synchronization point using a forward scan
+    let syncFound = false;
+    let syncOldPos = oldLen;
+    let syncNewPos = newLen;
 
-    // Find sync point using indexed positions for performance
-    let outerFound = false;
-    const searchEnd = newPos + lookAhead < newLen ? newPos + lookAhead : newLen;
+    // Look for the next matching sequence
+    const maxScanDistance = 50; // Prevent excessive scanning
+
     for (
-      let ahead = 0;
-      ahead <= lookAhead && oldPos + ahead < oldLen && !outerFound;
-      ahead++
+      let scanDist = 1;
+      scanDist <= maxScanDistance && !syncFound;
+      scanDist++
     ) {
-      const oldIdx = oldPos + ahead;
-      const element = oldArr[oldIdx];
-      const positions = newIndex.get(element);
-      if (!positions) continue;
-      for (let k = 0; k < positions.length; k++) {
-        const pos = positions[k];
-        if (pos < newPos) continue;
-        if (pos > searchEnd) break;
-
-        // Count matching sequence
-        let matchLen = 0;
-        const maxOld = oldLen - oldIdx;
-        const maxNew = newLen - pos;
-        const maxLen = maxOld < maxNew ? maxOld : maxNew;
-        while (
-          matchLen < maxLen &&
-          oldArr[oldIdx + matchLen] === newArr[pos + matchLen]
-        ) {
-          matchLen++;
+      // Try matching elements at various distances
+      const maxOldOffset = Math.min(scanDist, oldLen - changeOldStart - 1);
+      for (let oldOffset = 0; oldOffset <= maxOldOffset; oldOffset++) {
+        const newOffset = scanDist - oldOffset;
+        if (changeNewStart + newOffset >= newLen) {
+          continue;
         }
 
-        // Valid match if significant or end of both arrays
+        const oldIdx = changeOldStart + oldOffset;
+        const newIdx = changeNewStart + newOffset;
+
         if (
-          matchLen >= 2 ||
-          (oldIdx + matchLen >= oldLen && pos + matchLen >= newLen)
+          oldArr[oldIdx] === newArr[newIdx] &&
+          isGoodSyncPoint(oldArr, newArr, oldIdx, newIdx)
         ) {
-          syncOld = oldIdx;
-          syncNew = pos;
-          outerFound = true;
+          syncOldPos = oldIdx;
+          syncNewPos = newIdx;
+          syncFound = true;
           break;
         }
       }
     }
 
-    // Create operation
-    const deleteCount = syncOld - opStart;
-    const addCount = syncNew - addStart;
+    // Create operation for this change
+    const deleteCount = syncOldPos - changeOldStart;
+    const addCount = syncNewPos - changeNewStart;
 
     if (deleteCount > 0 || addCount > 0) {
-      let additions = EMPTY_ARRAY;
-      if (addCount === 1) {
-        additions = [newArr[addStart]];
-      } else if (addCount > 1) {
-        additions = new Array(addCount);
-        for (let i = 0; i < addCount; i++) {
-          additions[i] = newArr[addStart + i];
-        }
+      let additions;
+      if (addCount === 0) {
+        additions = EMPTY_ARRAY;
+      } else if (addCount === 1) {
+        additions = [newArr[changeNewStart]];
+      } else {
+        additions = newArr.slice(changeNewStart, changeNewStart + addCount);
       }
 
-      ops[ops.length] = [opStart, deleteCount, additions];
+      ops.push([changeOldStart, deleteCount, additions]);
     }
 
-    oldPos = syncOld;
-    newPos = syncNew;
+    oldPos = syncOldPos;
+    newPos = syncNewPos;
   }
 
   return ops;
@@ -211,6 +160,37 @@ function applyPatch(arr, ops) {
   }
 
   return result;
+}
+
+// isGoodSyncPoint checks if two positions represent a good synchronization point
+function isGoodSyncPoint(oldArr, newArr, oldIdx, newIdx) {
+  const oldLen = oldArr.length;
+  const newLen = newArr.length;
+  
+  if (oldIdx >= oldLen || newIdx >= newLen) {
+    return oldIdx >= oldLen && newIdx >= newLen;
+  }
+
+  // Check for at least 2 consecutive matches or end of arrays
+  let matches = 0;
+  const maxCheck = 2;
+  const maxOld = oldLen - oldIdx;
+  const maxNew = newLen - newIdx;
+  const checkLimit = maxCheck < maxOld ? (maxCheck < maxNew ? maxCheck : maxNew) : (maxOld < maxNew ? maxOld : maxNew);
+
+  for (let i = 0; i < checkLimit; i++) {
+    if (oldArr[oldIdx + i] === newArr[newIdx + i]) {
+      matches++;
+    } else {
+      break;
+    }
+  }
+
+  // Good sync point if we have 2+ matches or we've reached the end of both arrays
+  return (
+    matches >= 2 ||
+    (oldIdx + matches >= oldLen && newIdx + matches >= newLen)
+  );
 }
 
 // Export functions for interoperability testing
