@@ -5,7 +5,11 @@ import (
 )
 
 // Operation represents a diff operation as [index, deleteCount, additions]
-type Operation []interface{}
+type Operation struct {
+	I int      `json:"i"`
+	D int      `json:"d"`
+	A []string `json:"a"`
+}
 
 // Diff computes the difference between oldArr and newArr
 func Diff(oldArr, newArr []string) []Operation {
@@ -128,9 +132,9 @@ func ApplyPatch(arr []string, ops []Operation) []string {
 	// Single operation optimization
 	if opsLen == 1 {
 		op := ops[0]
-		opIndex := op[0].(int)
-		deleteCount := op[1].(int)
-		additions := op[2].([]string)
+		opIndex := op.I
+		deleteCount := op.D
+		additions := op.A
 
 		arrLen := len(arr)
 		result := make([]string, arrLen-deleteCount+len(additions))
@@ -163,9 +167,9 @@ func ApplyPatch(arr []string, ops []Operation) []string {
 	// Apply operations in reverse order
 	for i := opsLen - 1; i >= 0; i-- {
 		op := ops[i]
-		opIndex := op[0].(int)
-		deleteCount := op[1].(int)
-		additions := op[2].([]string)
+		opIndex := op.I
+		deleteCount := op.D
+		additions := op.A
 		addLen := len(additions)
 
 		if addLen == 0 {
@@ -193,31 +197,16 @@ func ApplyPatch(arr []string, ops []Operation) []string {
 
 // Helper function to convert Go operations to JSON format compatible with JS
 func OperationsToJSON(ops []Operation) (string, error) {
-	jsonOps := make([][]interface{}, len(ops))
-	for i, op := range ops {
-		jsonOps[i] = []interface{}{op[0], op[1], op[2]}
-	}
-	jsonBytes, err := json.Marshal(jsonOps)
+	jsonBytes, err := json.Marshal(ops)
 	return string(jsonBytes), err
 }
 
 // Helper function to parse JSON operations from JS
 func OperationsFromJSON(jsonStr string) ([]Operation, error) {
-	var jsonOps [][]interface{}
-	err := json.Unmarshal([]byte(jsonStr), &jsonOps)
-	if err != nil {
+	var jsonOps []Operation
+	if err := json.Unmarshal([]byte(jsonStr), &jsonOps); err != nil {
 		return nil, err
 	}
 
-	ops := make([]Operation, len(jsonOps))
-	for i, jsonOp := range jsonOps {
-		// Convert additions from []interface{} to []string
-		additionsInterface := jsonOp[2].([]interface{})
-		additions := make([]string, len(additionsInterface))
-		for j, add := range additionsInterface {
-			additions[j] = add.(string)
-		}
-		ops[i] = Operation{int(jsonOp[0].(float64)), int(jsonOp[1].(float64)), additions}
-	}
-	return ops, nil
+	return jsonOps, nil
 }

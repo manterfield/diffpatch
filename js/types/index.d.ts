@@ -5,7 +5,7 @@
  * - deleteCount: Number of elements to delete
  * - additions: Array of elements to add at the position
  */
-export type DiffOperation<T = any> = [number, number, T[]];
+export type DiffOperation<T = any> = { i: number; d: number; a: T[] };
 
 /**
  * Computes the difference between two arrays and returns a set of operations

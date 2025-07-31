@@ -13,7 +13,7 @@ function diff(oldArr, newArr) {
   }
 
   if (newLen === 0) {
-    return [[0, oldLen, EMPTY_ARRAY]];
+    return [{ i: 0, d: oldLen, a: EMPTY_ARRAY }];
   }
 
   const ops = []; // Pre-allocate with capacity to reduce allocations
@@ -89,7 +89,7 @@ function diff(oldArr, newArr) {
         additions = newArr.slice(changeNewStart, changeNewStart + addCount);
       }
 
-      ops.push([changeOldStart, deleteCount, additions]);
+      ops.push({ i: changeOldStart, d: deleteCount, a: additions });
     }
 
     oldPos = syncOldPos;
@@ -107,11 +107,11 @@ function applyPatch(arr, ops) {
   if (opsLen === 1) {
     const op = ops[0];
     const arrLen = arr.length;
-    const result = new Array(arrLen - op[1] + op[2].length);
+    const result = new Array(arrLen - op.d + op.a.length);
 
     let pos = 0;
-    const opIndex = op[0];
-    const addLen = op[2].length;
+    const opIndex = op.i;
+    const addLen = op.a.length;
 
     // Copy prefix - avoid indirection
     for (let i = 0; i < opIndex; i++) {
@@ -119,10 +119,10 @@ function applyPatch(arr, ops) {
     }
     // Add new elements - avoid property lookup
     for (let i = 0; i < addLen; i++) {
-      result[pos++] = op[2][i];
+      result[pos++] = op.a[i];
     }
     // Copy suffix - cache calculation
-    const suffixStart = opIndex + op[1];
+    const suffixStart = opIndex + op.d;
     for (let i = suffixStart; i < arrLen; i++) {
       result[pos++] = arr[i];
     }
@@ -140,21 +140,21 @@ function applyPatch(arr, ops) {
   // Reverse iteration - avoid length property lookup
   for (let i = opsLen - 1; i >= 0; i--) {
     const op = ops[i];
-    const addLen = op[2].length;
+    const addLen = op.a.length;
 
     if (addLen === 0) {
-      result.splice(op[0], op[1]);
-    } else if (op[1] === 0) {
+      result.splice(op.i, op.d);
+    } else if (op.d === 0) {
       if (addLen === 1) {
-        result.splice(op[0], 0, op[2][0]);
+        result.splice(op.i, 0, op.a[0]);
       } else {
-        result.splice(op[0], 0, ...op[2]);
+        result.splice(op.i, 0, ...op.a);
       }
     } else {
       if (addLen === 1) {
-        result.splice(op[0], op[1], op[2][0]);
+        result.splice(op.i, op.d, op.a[0]);
       } else {
-        result.splice(op[0], op[1], ...op[2]);
+        result.splice(op.i, op.d, ...op.a);
       }
     }
   }

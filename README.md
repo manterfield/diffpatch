@@ -49,23 +49,23 @@ Patches are an array of operations. Each operation is an index, the number of it
 An example patch:
 ```json
 [
-  [23, 10, []],
-  [48, 1, ["\n\nSuspendisse ullamcorper molestie"]],
-  [
-    54,
-    1,
-    [
+  {i:23, d:10, a:[]},
+  {i:48, d:1, a:["\n\nSuspendisse ullamcorper molestie"]},
+  {
+    i:54,
+    d:1,
+    a:[
       " Duis faucibus, quam vel tristique mattis, leo odio volutpat tortoise, ac molestie purus erat ac felis"
     ]
-  ],
-  [
-    61,
-    1,
-    [
+  },
+  {
+    i:61,
+    d:1,
+    a:[
       "\nDonec bibendum, erat eu consequat vehicula, elit justo lacinia tortor, at vehicula leo felis et mi"
     ]
-  ],
-  [64, 0, [" It was the best of days, it was the blurst of days"]]
+  },
+  {i:64, d:0, a:[" It was the best of days, it was the blurst of days"]}
 ]
 ```
 
