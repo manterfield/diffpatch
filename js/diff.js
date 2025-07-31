@@ -9,11 +9,11 @@ function diff(oldArr, newArr) {
     if (newLen === 0) {
       return [];
     }
-    return [[0, 0, newArr.slice()]];
+    return [{ i: [0, 0], a: newArr.slice() }];
   }
 
   if (newLen === 0) {
-    return [{ i: 0, d: oldLen, a: EMPTY_ARRAY }];
+    return [{ i: [0, oldLen], a: EMPTY_ARRAY }];
   }
 
   const ops = []; // Pre-allocate with capacity to reduce allocations
@@ -89,7 +89,7 @@ function diff(oldArr, newArr) {
         additions = newArr.slice(changeNewStart, changeNewStart + addCount);
       }
 
-      ops.push({ i: changeOldStart, d: deleteCount, a: additions });
+      ops.push({ i: [changeOldStart, deleteCount], a: additions });
     }
 
     oldPos = syncOldPos;
@@ -107,10 +107,10 @@ function applyPatch(arr, ops) {
   if (opsLen === 1) {
     const op = ops[0];
     const arrLen = arr.length;
-    const result = new Array(arrLen - op.d + op.a.length);
+    const result = new Array(arrLen - op.i[1] + op.a.length);
 
     let pos = 0;
-    const opIndex = op.i;
+    const opIndex = op.i[0];
     const addLen = op.a.length;
 
     // Copy prefix - avoid indirection
@@ -122,7 +122,7 @@ function applyPatch(arr, ops) {
       result[pos++] = op.a[i];
     }
     // Copy suffix - cache calculation
-    const suffixStart = opIndex + op.d;
+    const suffixStart = opIndex + op.i[1];
     for (let i = suffixStart; i < arrLen; i++) {
       result[pos++] = arr[i];
     }
@@ -143,18 +143,18 @@ function applyPatch(arr, ops) {
     const addLen = op.a.length;
 
     if (addLen === 0) {
-      result.splice(op.i, op.d);
-    } else if (op.d === 0) {
+      result.splice(op.i[0], op.i[1]);
+    } else if (op.i[1] === 0) {
       if (addLen === 1) {
-        result.splice(op.i, 0, op.a[0]);
+        result.splice(op.i[0], 0, op.a[0]);
       } else {
-        result.splice(op.i, 0, ...op.a);
+        result.splice(op.i[0], 0, ...op.a);
       }
     } else {
       if (addLen === 1) {
-        result.splice(op.i, op.d, op.a[0]);
+        result.splice(op.i[0], op.i[1], op.a[0]);
       } else {
-        result.splice(op.i, op.d, ...op.a);
+        result.splice(op.i[0], op.i[1], ...op.a);
       }
     }
   }

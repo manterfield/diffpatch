@@ -4,10 +4,9 @@ import (
 	"encoding/json"
 )
 
-// Operation represents a diff operation as [index, deleteCount, additions]
+// Operation represents a diff operation as {[index, deleteCount], additions}
 type Operation struct {
-	I int      `json:"i"`
-	D int      `json:"d"`
+	I []int    `json:"i"`
 	A []string `json:"a"`
 }
 
@@ -20,11 +19,11 @@ func Diff(oldArr, newArr []string) []Operation {
 		if newLen == 0 {
 			return []Operation{}
 		}
-		return []Operation{{0, 0, newArr}}
+		return []Operation{{[]int{0, 0}, newArr}}
 	}
 
 	if newLen == 0 {
-		return []Operation{{0, oldLen, []string{}}}
+		return []Operation{{[]int{0, oldLen}, []string{}}}
 	}
 
 	ops := make([]Operation, 0, 4) // Pre-allocate with capacity to reduce allocations
@@ -88,7 +87,7 @@ func Diff(oldArr, newArr []string) []Operation {
 				copy(additions, newArr[changeNewStart:changeNewStart+addCount])
 			}
 
-			ops = append(ops, Operation{changeOldStart, deleteCount, additions})
+			ops = append(ops, Operation{[]int{changeOldStart, deleteCount}, additions})
 		}
 
 		oldPos = syncOldPos
@@ -132,8 +131,8 @@ func ApplyPatch(arr []string, ops []Operation) []string {
 	// Single operation optimization
 	if opsLen == 1 {
 		op := ops[0]
-		opIndex := op.I
-		deleteCount := op.D
+		opIndex := op.I[0]
+		deleteCount := op.I[1]
 		additions := op.A
 
 		arrLen := len(arr)
@@ -167,8 +166,8 @@ func ApplyPatch(arr []string, ops []Operation) []string {
 	// Apply operations in reverse order
 	for i := opsLen - 1; i >= 0; i-- {
 		op := ops[i]
-		opIndex := op.I
-		deleteCount := op.D
+		opIndex := op.I[0]
+		deleteCount := op.I[1]
 		additions := op.A
 		addLen := len(additions)
 

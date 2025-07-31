@@ -7,11 +7,11 @@ func SimpleDiff(oldArr, newArr []string) []Operation {
 		if len(newArr) == 0 {
 			return []Operation{}
 		}
-		return []Operation{{0, 0, newArr}}
+		return []Operation{{[]int{0, 0}, newArr}}
 	}
 
 	if len(newArr) == 0 {
-		return []Operation{{0, len(oldArr), []string{}}}
+		return []Operation{{[]int{0, len(oldArr)}, []string{}}}
 	}
 
 	// Fast path: check if arrays are identical
@@ -44,7 +44,7 @@ func SimpleDiff(oldArr, newArr []string) []Operation {
 		return []Operation{} // No changes needed
 	}
 
-	return []Operation{{oldStart, oldLen, newMiddle}}
+	return []Operation{{[]int{oldStart, oldLen}, newMiddle}}
 }
 
 // arraysEqual checks if two string arrays are identical
