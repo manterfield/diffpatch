@@ -44,28 +44,26 @@ Splitting on new lines `\n` is a reliable option too. The way you split your tex
 
 diffpatch doesn't produce patches that are nice to read, unless you're a computer program - in which case you'll love reading them. If you're a human though, not so much. This helps keep the size down for sending over network/storing/hanging in a frame above your fireplace.
 
-Patches are an array of operations. Each operation is an index, the number of items to delete, the items to insert.
+Patches are an array of operations. Each operation is an index, the number of items to delete, and the items to insert.
 
 An example patch:
 ```json
 [
-  {"i":23, "d":10, "a":[]},
-  {"i":48, "d":1, "a":["\n\nSuspendisse ullamcorper molestie"]},
+  {"i":[23, 10], "a":[]},
+  {"i":[48, 1], "a":["\n\nSuspendisse ullamcorper molestie"]},
   {
-    "i":54,
-    "d":1,
+    "i":[54, 1],
     "a":[
       " Duis faucibus, quam vel tristique mattis, leo odio volutpat tortoise, ac molestie purus erat ac felis"
     ]
   },
   {
-    "i":61,
-    "d":1,
+    "i":[61, 1],
     "a":[
       "\nDonec bibendum, erat eu consequat vehicula, elit justo lacinia tortor, at vehicula leo felis et mi"
     ]
   },
-  {"i":64, "d":0, "a":[" It was the best of days, it was the blurst of days"]}
+  {"i":[64, 0], "a":[" It was the best of days, it was the blurst of days"]}
 ]
 ```
 
